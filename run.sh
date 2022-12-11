@@ -1,3 +1,3 @@
 #! /bin/sh
 
-out/build ; ./Boids
+cd out/build ; ./Boids

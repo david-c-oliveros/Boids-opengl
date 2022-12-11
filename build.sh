@@ -1,3 +1,3 @@
 #! /bin/sh
 
-out/build ; make
+cd out/build ; make

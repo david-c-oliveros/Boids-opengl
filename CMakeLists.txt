@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.23.3)
 
 project(Boids)
 
-add_executable(${PROJECT_NAME} src/Boids.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/Boids.cpp)
 
 add_subdirectory(external/glfw)
 
