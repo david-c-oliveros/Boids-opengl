@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.23.3)
 
-#add_compile_options(-Wfatal-errors -w)
+add_compile_options(-Wfatal-errors -w -g)
 
 find_package(OpenGL REQUIRED COMPONENTS OpenGL)
 find_package(GLEW REQUIRED)
@@ -9,7 +9,8 @@ project(Boids)
 
 add_executable(${PROJECT_NAME} src/main.cpp
     src/Boids.cpp
-    src/Boid.cpp)
+    src/Boid.cpp
+    src/Shader.cpp)
 
 add_subdirectory(external/glfw)
 add_subdirectory(external/imgui)

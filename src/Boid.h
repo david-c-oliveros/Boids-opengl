@@ -2,17 +2,77 @@
 #define BOID_H
 
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include "Shader.h"
 
 class Boid
 {
-    public:
-        glm::vec2 vPos;
-        glm::vec2 vVel;
+    private:
+        glm::vec3 m_vColor;
 
-        Boid(glm::vec2 pos, glm::vec2 vel);
+    public:
+        static constexpr float triangle[] = {
+            -0.5f, -0.5f, 0.0f,
+             0.5f, -0.5f, 0.0f,
+             0.0f,  0.5f, 0.0f
+        };
+
+        static constexpr float vertices[] = {
+            -0.5f, -0.5f, -0.5f, 
+             0.5f, -0.5f, -0.5f,  
+             0.5f,  0.5f, -0.5f,  
+             0.5f,  0.5f, -0.5f,  
+            -0.5f,  0.5f, -0.5f, 
+            -0.5f, -0.5f, -0.5f, 
+
+            -0.5f, -0.5f,  0.5f, 
+             0.5f, -0.5f,  0.5f,  
+             0.5f,  0.5f,  0.5f,  
+             0.5f,  0.5f,  0.5f,  
+            -0.5f,  0.5f,  0.5f, 
+            -0.5f, -0.5f,  0.5f, 
+
+            -0.5f,  0.5f,  0.5f, 
+            -0.5f,  0.5f, -0.5f, 
+            -0.5f, -0.5f, -0.5f, 
+            -0.5f, -0.5f, -0.5f, 
+            -0.5f, -0.5f,  0.5f, 
+            -0.5f,  0.5f,  0.5f, 
+
+             0.5f,  0.5f,  0.5f,  
+             0.5f,  0.5f, -0.5f,  
+             0.5f, -0.5f, -0.5f,  
+             0.5f, -0.5f, -0.5f,  
+             0.5f, -0.5f,  0.5f,  
+             0.5f,  0.5f,  0.5f,  
+
+            -0.5f, -0.5f, -0.5f, 
+             0.5f, -0.5f, -0.5f,  
+             0.5f, -0.5f,  0.5f,  
+             0.5f, -0.5f,  0.5f,  
+            -0.5f, -0.5f,  0.5f, 
+            -0.5f, -0.5f, -0.5f, 
+
+            -0.5f,  0.5f, -0.5f, 
+             0.5f,  0.5f, -0.5f,  
+             0.5f,  0.5f,  0.5f,  
+             0.5f,  0.5f,  0.5f,  
+            -0.5f,  0.5f,  0.5f, 
+            -0.5f,  0.5f, -0.5f, 
+        };
+        glm::vec3 vPos;
+        glm::vec3 vVel;
+
+        unsigned int VBO, VAO, EBO;
+
+        Boid(glm::vec3 pos, glm::vec3 vel);
         ~Boid();
 
-        void Update();
+        void SetColor(glm::vec3 color);
+
+        void SetupMesh();
+        glm::mat4 Draw(Shader &shader, float fRotAngle);
 };
 
 #endif
