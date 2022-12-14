@@ -63,6 +63,7 @@ class Boids {
 
         // Debug
         glm::vec3 m_vBoundPos = glm::vec3(0.0f, 0.0f, 0.0f);
+        glm::vec3 m_vCursorPos;
 
         ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -91,6 +92,8 @@ class Boids {
         glm::vec3 Rule3(int iCurBoidPos);
         glm::vec3 BoundPos(Boid b);
         void LimitVel(Boid &b);
+        glm::vec3 TendToPlace(Boid b);
+        glm::vec3 StrongWind();
 
 };
 

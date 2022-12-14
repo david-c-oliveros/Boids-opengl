@@ -91,7 +91,7 @@ bool Boids::Construct()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, key_callback);
 
@@ -137,6 +137,14 @@ void Boids::Update(float fDeltaTime)
 {
     fCurrentFrame = static_cast<float>(glfwGetTime());
     direction = NONE;
+
+    double x;
+    double y;
+    glfwGetCursorPos(window, &x, &y);
+    m_vCursorPos = glm::vec3((float)x, (float)y, 0.0f);
+
+    glm::vec3 vPlace = glm::vec3((float)x, (float)y, 0.0f);
+
     processInput(window);
 
     /***********************************************/
@@ -181,10 +189,10 @@ void Boids::RenderUI()
     glClearColor(0.05f, 0.05f, 0.25f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    if (bCursor == false)
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    else
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    //if (bCursor == false)
+    //    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    //else
+    //    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
     // Start the Dear ImGui frame
     if (bUI)
@@ -228,8 +236,9 @@ void Boids::RenderUI()
             ImGui::Begin("Debug", &debug);
             ImGui::Text("Debug info here");
             ImGui::Text(sDebugInfo.c_str());
-            ImGui::Text("fDeltaTime: %d", fDeltaTime);
-            ImGui::Text("Boid #0 Position: %s", glm::to_string(vFlock[0].vPos).c_str());
+            ImGui::Text("fDeltaTime: %f", fDeltaTime);
+            ImGui::Text("Cursor Position: %s", glm::to_string(m_vCursorPos).c_str());
+            ImGui::Text("Boid #0 Position: %s", glm::to_string(boidPos).c_str());
             ImGui::Text("Boid #0 Velocity: %s", glm::to_string(vFlock[0].vVel).c_str());
             ImGui::Text("Boid #0 BoundPos Value: %s", glm::to_string(m_vBoundPos).c_str());
 
@@ -264,19 +273,30 @@ void Boids::InitializeBoids()
 }
 
 
+/************************************************/
+/************************************************/
+/*                                              */
+/*        Move all boids to new position        */
+/*                                              */
+/************************************************/
+/************************************************/
 void Boids::UpdateBoids()
 {
-    //vFlock[0].vPos = boidPos;
-    glm::vec3 v1, v2, v3, v4;
-    for (int i = 0; i < vFlock.size(); i++)
+    vFlock[0].vPos = boidPos;
+
+    glm::vec3 v1, v2, v3, v4, v5, v6;
+
+    for (int i = 1; i < vFlock.size(); i++)
     {
         v1 = Rule1(i);
         v2 = Rule2(i);
         v3 = Rule3(i);
         v4 = BoundPos(vFlock[i]);
+        v5 = TendToPlace(vFlock[i]);
+        v6 = StrongWind();
         m_vBoundPos = v4;
 
-        vFlock[i].vVel = vFlock[i].vVel + v1 + v2 + v3 + v4;
+        vFlock[i].vVel = vFlock[i].vVel + v1 + v2 + v3 + v4 + v5;
         LimitVel(vFlock[i]);
         vFlock[i].vPos = (vFlock[i].vPos + vFlock[i].vVel);
     }
@@ -384,12 +404,36 @@ glm::vec3 Boids::BoundPos(Boid b)
 
 void Boids::LimitVel(Boid &b)
 {
-    glm::vec3 vLim = glm::vec3(0.005f, 0.005f, 0.0f);
+    glm::vec3 vLim = glm::vec3(0.02f, 0.02f, 0.0f);
 
     b.vVel = glm::clamp(b.vVel, -vLim, vLim);
 }
 
 
+glm::vec3 Boids::TendToPlace(Boid b)
+{
+    glm::vec3 vPlace = glm::vec3(0.0f);
+    vPlace.x = math_util::remap(m_vCursorPos.x, 0.0f, SCR_WIDTH, -RATIO, RATIO);
+    vPlace.y = math_util::remap(m_vCursorPos.y, 0.0f, SCR_HEIGHT, 1.0f, -1.0f);
+
+    return (vPlace - b.vPos) / 100.0f;
+}
+
+
+glm::vec3 Boids::StrongWind()
+{
+    return glm::vec3(0.01f, -0.001f, 0.0f);
+}
+
+
+
+/************************************/
+/************************************/
+/*                                  */
+/*        Callback Functions        */
+/*                                  */
+/************************************/
+/************************************/
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
