@@ -52,9 +52,6 @@ class Boids {
         GLint vpos_location;
         GLint vcol_location;
 
-        glm::vec3 vMin = glm::vec3(-1.0f, -1.0f, 0.0f);
-        glm::vec3 vMax = glm::vec3( 1.0f,  1.0f, 0.0f);
-
         Shader shader;
 
         // ImGui states
@@ -63,12 +60,16 @@ class Boids {
         bool show_demo_window = false;
         bool show_another_window = false;
         bool debug = true;
+
+        // Debug
+        glm::vec3 m_vBoundPos = glm::vec3(0.0f, 0.0f, 0.0f);
+
         ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
         unsigned int VBO, VAO, EBO;
         std::string sDebugInfo;
 
-        int iNumBoids = 10;
+        int iNumBoids = 100;
         std::vector<Boid> vFlock;
 
     public:
@@ -79,8 +80,8 @@ class Boids {
         void Start();
         void Update(float fDeltaTime);
         void Render();
-        void RenderTest();
-        void RenderTriangle();
+        void RenderBoids();
+        void RenderUI();
 
         void InitializeBoids();
         void UpdateBoids();

@@ -3,6 +3,7 @@
 
 unsigned int SCR_WIDTH = 1920;
 unsigned int SCR_HEIGHT = 1080;
+float RATIO = (float)SCR_WIDTH / (float)SCR_HEIGHT;
 
 float fDeltaTime = 0.0f;
 float fLastFrame = 0.0f;
@@ -37,6 +38,7 @@ Boids::~Boids()
 
 bool Boids::Construct()
 {
+    std::cout << "Screen Ratio: " << RATIO << std::endl;
     const char* glsl_version = "#version 330";
     /**********************************************************/
     /**********************************************************/
@@ -157,6 +159,25 @@ void Boids::Update(float fDeltaTime)
 
 void Boids::Render()
 {
+    RenderUI();
+    RenderBoids();
+
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+}
+
+
+void Boids::RenderBoids()
+{
+    for (auto &b : vFlock)
+    {
+        b.Draw(shader);
+    }
+}
+
+
+void Boids::RenderUI()
+{
     glClearColor(0.05f, 0.05f, 0.25f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -207,12 +228,10 @@ void Boids::Render()
             ImGui::Begin("Debug", &debug);
             ImGui::Text("Debug info here");
             ImGui::Text(sDebugInfo.c_str());
-            std::string cCamPos = glm::to_string(vCameraPos).c_str();
-            const char* c = cCamPos.c_str();
-            ImGui::Text("Camera Position: %s", c);
             ImGui::Text("fDeltaTime: %d", fDeltaTime);
             ImGui::Text("Boid #0 Position: %s", glm::to_string(vFlock[0].vPos).c_str());
             ImGui::Text("Boid #0 Velocity: %s", glm::to_string(vFlock[0].vVel).c_str());
+            ImGui::Text("Boid #0 BoundPos Value: %s", glm::to_string(m_vBoundPos).c_str());
 
             if (ImGui::Button("Close"))
                 debug = false;
@@ -223,19 +242,16 @@ void Boids::Render()
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     }
-
-    for (auto &b : vFlock)
-    {
-        b.Draw(shader);
-    }
-
-    glfwSwapBuffers(window);
-    glfwPollEvents();
 }
 
 
 void Boids::InitializeBoids()
 {
+    //glm::vec3 pos = glm::vec3(1.0f, 0.0f, 0.0f);
+    //Boid b(pos, glm::vec3(0.0f, 0.0f, 0.0f));
+    //b.SetColor(glm::vec3(1.0f, 0.0f, 0.0f));
+    //vFlock.push_back(b);
+
     for (int i = 0; i < iNumBoids; i++)
     {
         glm::vec3 pos = math_util::remap(glm::vec3(i * 1.0f, i * 1.0f, 0.0f), 0.0f, (float)iNumBoids, -1.0f, 1.0f);
@@ -244,6 +260,7 @@ void Boids::InitializeBoids()
         b.SetColor(glm::vec3(1.0f, 1.0f, 1.0f));
         vFlock.push_back(b);
     }
+    vFlock[0].SetColor(glm::vec3(1.0f, 0.0f, 0.0f));
 }
 
 
@@ -257,15 +274,22 @@ void Boids::UpdateBoids()
         v2 = Rule2(i);
         v3 = Rule3(i);
         v4 = BoundPos(vFlock[i]);
+        m_vBoundPos = v4;
 
         vFlock[i].vVel = vFlock[i].vVel + v1 + v2 + v3 + v4;
         LimitVel(vFlock[i]);
         vFlock[i].vPos = (vFlock[i].vPos + vFlock[i].vVel);
     }
-
 }
 
 
+/**************************************************************************/
+/**************************************************************************/
+/*                                                                        */
+/*        Rule 1: Boids try to fly towards center of mass of flock        */
+/*                                                                        */
+/**************************************************************************/
+/**************************************************************************/
 glm::vec3 Boids::Rule1(int iBoidIndex)
 {
     glm::vec3 vPCenterOfMass = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -280,11 +304,20 @@ glm::vec3 Boids::Rule1(int iBoidIndex)
 
     vPCenterOfMass = vPCenterOfMass / (vFlock.size() - 1.0f);
 
-    return vPCenterOfMass / 100.0f;
+    return vPCenterOfMass / 1000.0f;
 }
 
+
+/**********************************************************************************/
+/**********************************************************************************/
+/*                                                                                */
+/*        Rule 2: Boids try ot keep a small distance away from other boids        */
+/*                                                                                */
+/**********************************************************************************/
+/**********************************************************************************/
 glm::vec3 Boids::Rule2(int iBoidIndex)
 {
+    float fInfluence = 1.0f;
     glm::vec3 c(0.0f, 0.0f, 0.0f);
 
     for (int i = 0; i < vFlock.size(); i++)
@@ -292,9 +325,9 @@ glm::vec3 Boids::Rule2(int iBoidIndex)
         if (i == iBoidIndex)
             continue;
 
-        if (glm::length(vFlock[i].vPos - vFlock[iBoidIndex].vPos) < 100.0f)
+        if (glm::length(vFlock[i].vPos - vFlock[iBoidIndex].vPos) < 0.04f)
         {
-            c = c - (vFlock[i].vPos - vFlock[iBoidIndex].vPos);
+            c = c - (vFlock[i].vPos - vFlock[iBoidIndex].vPos) * fInfluence;
         }
     }
 
@@ -302,6 +335,13 @@ glm::vec3 Boids::Rule2(int iBoidIndex)
 }
 
 
+/****************************************************************************/
+/****************************************************************************/
+/*                                                                          */
+/*        Rule 3: Boids try to match the velocity of the other boids        */
+/*                                                                          */
+/****************************************************************************/
+/****************************************************************************/
 glm::vec3 Boids::Rule3(int iBoidIndex)
 {
     glm::vec3 vPVel = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -315,7 +355,7 @@ glm::vec3 Boids::Rule3(int iBoidIndex)
 
     vPVel = vPVel / (vFlock.size() - 1.0f);
 
-    return (vPVel - vFlock[iBoidIndex].vVel) / 8.0f;
+    return (vPVel - vFlock[iBoidIndex].vVel) / 64.0f;
 }
 
 
@@ -323,15 +363,20 @@ glm::vec3 Boids::BoundPos(Boid b)
 {
     glm::vec3 v = glm::vec3(0.0f, 0.0f, 0.0f);
 
-    if (b.vPos.x < vMin.x)
-        v.x = -0.9f;
-    else if(b.vPos.x > vMax.x)
-        v.x = 0.9f;
+    glm::vec3 vMin = glm::vec3(-RATIO + 0.5f, -0.5, 0.0f);
+    glm::vec3 vMax = glm::vec3( RATIO - 0.5f,  0.5f, 0.0f);
 
-    if (b.vPos.x < vMin.y)
-        v.y = -0.9f;
-    else if(b.vPos.x > vMax.y)
-        v.y = 0.9f;
+    bool oob = false;
+
+    if (b.vPos.x < vMin.x)
+        v.x =  0.4;
+    else if(b.vPos.x > vMax.x)
+        v.x = -0.4;
+
+    if (b.vPos.y < vMin.y)
+        v.y =  0.4;
+    else if(b.vPos.y > vMax.y)
+        v.y = -0.4;
 
     return v;
 }
@@ -339,11 +384,9 @@ glm::vec3 Boids::BoundPos(Boid b)
 
 void Boids::LimitVel(Boid &b)
 {
-    glm::vec3 vLim = glm::vec3(0.001f, 0.001f, 0.0f);
+    glm::vec3 vLim = glm::vec3(0.005f, 0.005f, 0.0f);
 
     b.vVel = glm::clamp(b.vVel, -vLim, vLim);
-//    if (abs(glm::length(b.vVel)) > vLim)
-//        b.vVel = (b.vVel / abs(b.vVel) * vLim);
 }
 
 
