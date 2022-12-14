@@ -20,44 +20,6 @@ float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 float fov = 45.0f;
 
-const std::vector<std::string> debug_CamDir_str { "", "Forward", "Backward", "Left", "Right" };
-Cam_Dir direction;
-
-static const char* vertex_shader_text =
-"#version 330\n"
-"uniform mat4 MVP;\n"
-"in vec3 vCol;\n"
-"in vec2 vPos;\n"
-"out vec3 color;\n"
-"void main()\n"
-"{\n"
-"    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
-"    color = vCol;\n"
-"}\n";
-
-static const char* fragment_shader_text =
-"#version 330\n"
-"in vec3 color;\n"
-"out vec4 fragment;\n"
-"void main()\n"
-"{\n"
-"    fragment = vec4(color, 1.0);\n"
-"}\n";
-
-//static const Vertex vertices[3] =
-//{
-//    { { -0.6f, -0.4f }, { 1.f, 0.f, 0.f } },
-//    { {  0.6f, -0.4f }, { 0.f, 1.f, 0.f } },
-//    { {   0.f,  0.6f }, { 0.f, 0.f, 1.f } } 
-//};
-
-float triangle[] = {
-    -0.5f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.5f, 0.0f
-};
-
-
 Boids::Boids()
 {
 }
@@ -144,7 +106,6 @@ void Boids::Start()
 { 
     InitializeBoids();
 
-    //BuffersAndShaders();
 
     // Main Loop
     while (!glfwWindowShouldClose(window))
@@ -179,10 +140,7 @@ void Boids::Update(float fDeltaTime)
 
     const float ratio = (float)SCR_WIDTH / (float)SCR_HEIGHT;
     glm::mat4 projection = glm::ortho(-ratio, ratio, -1.0f, 1.0f, 1.0f, -1.0f);
-    //mvp = projection * model;
 
-    //glUseProgram(program);
-    //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) &mvp);
     shader.SetMat4("projection", projection);
     shader.SetMat4("view", glm::mat4(1.0f));
     shader.Use();
@@ -195,7 +153,6 @@ void Boids::Render()
 {
     glClearColor(0.05f, 0.05f, 0.25f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (bCursor == false)
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
