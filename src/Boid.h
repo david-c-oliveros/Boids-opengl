@@ -6,19 +6,33 @@
 
 #include "Shader.h"
 
+typedef struct Vertex
+{
+    glm::vec2 pos;
+} Vertex;
+
+
+
 class Boid
 {
     private:
         glm::vec3 m_vColor;
 
     public:
+        static constexpr Vertex vertices[3] =
+        {
+            { { -0.6f, -0.4f } },
+            { {  0.6f, -0.4f } },
+            { {  0.0f,  0.6f } } 
+        };
+
         static constexpr float triangle[] = {
             -0.5f, -0.5f, 0.0f,
              0.5f, -0.5f, 0.0f,
              0.0f,  0.5f, 0.0f
         };
 
-        static constexpr float vertices[] = {
+        static constexpr float cube[] = {
             -0.5f, -0.5f, -0.5f, 
              0.5f, -0.5f, -0.5f,  
              0.5f,  0.5f, -0.5f,  
@@ -61,18 +75,18 @@ class Boid
             -0.5f,  0.5f,  0.5f, 
             -0.5f,  0.5f, -0.5f, 
         };
-        glm::vec3 vPos;
-        glm::vec3 vVel;
+        glm::vec2 vPos;
+        glm::vec2 vVel;
 
         unsigned int VBO, VAO, EBO;
 
-        Boid(glm::vec3 pos, glm::vec3 vel);
+        Boid(glm::vec2 pos, glm::vec2 vel);
         ~Boid();
 
         void SetColor(glm::vec3 color);
 
         void SetupMesh();
-        glm::mat4 Draw(Shader &shader, float fRotAngle);
+        glm::mat4 Draw(Shader &shader);
 };
 
 #endif

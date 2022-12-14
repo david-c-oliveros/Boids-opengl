@@ -2,10 +2,18 @@ cmake_minimum_required(VERSION 3.23.3)
 
 add_compile_options(-Wfatal-errors -w -g)
 
-find_package(OpenGL REQUIRED COMPONENTS OpenGL)
-find_package(GLEW REQUIRED)
+#find_package(OpenGL REQUIRED COMPONENTS OpenGL)
+find_package(OpenGL)
+#find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS OpenGl)
+#if(TARGET OpenGL::OpenGL)
+#    target_link_libraries(${PROJECT_NAME} OpenGL::OpenGL)
+#else()
+#    target_link_libraries(${PROJECT_NAME} OpenGL::GL)
+#endif()
 
 project(Boids)
+
+find_package(GLEW REQUIRED)
 
 add_executable(${PROJECT_NAME} src/main.cpp
     src/Boids.cpp
@@ -28,4 +36,4 @@ target_link_directories(${PROJECT_NAME}
 
 include_directories(${GLEW_INCLUDE_DIRS})
 
-target_link_libraries(${PROJECT_NAME} glfw ${GLFW_LIBRARIES} GLEW OpenGL::OpenGL imgui glm::glm)
+target_link_libraries(${PROJECT_NAME} glfw ${GLFW_LIBRARIES} GLEW imgui glm::glm m OpenGL)

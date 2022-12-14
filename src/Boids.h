@@ -22,26 +22,46 @@
 /*        Callback Functions        */
 /************************************/
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xPosIn, double yPosIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void processInput(GLFWwindow* window);
+
+
+enum Cam_Dir
+{
+    NONE,
+    FORWARD,
+    BACKWARD,
+    LEFT,
+    RIGHT
+};
+
 
 
 class Boids {
 
     private:
         float debug_fRotAngle;
+
         GLFWwindow *window;
+        
+        GLuint vertex_array;
+        GLuint program;
+        GLint mvp_location;
+        GLint vpos_location;
+        GLint vcol_location;
+
         Shader shader;
 
         // ImGui states
-        bool bUI = true;
-        bool show_demo_window = true;
+        bool bUI = false;
+        bool test_triangle = false;
+        bool show_demo_window = false;
         bool show_another_window = false;
-        bool debug = false;
+        bool debug = true;
         ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+        unsigned int VBO, VAO, EBO;
         std::string sDebugInfo;
 
         int iNumBoids = 1;
@@ -55,12 +75,15 @@ class Boids {
         void Start();
         void Update(float fDeltaTime);
         void Render();
+        void RenderTest();
+        void RenderTriangle();
 
         void InitializeBoids();
         void UpdateBoids();
-        glm::vec3 Rule1(Boid b, int iCurBoidPos);
-        glm::vec3 Rule2(Boid b, int iCurBoidPos);
-        glm::vec3 Rule3(Boid b, int iCurBoidPos);
+        void BuffersAndShaders();
+        glm::vec2 Rule1(Boid b, int iCurBoidPos);
+        glm::vec2 Rule2(Boid b, int iCurBoidPos);
+        glm::vec2 Rule3(Boid b, int iCurBoidPos);
 
 };
 

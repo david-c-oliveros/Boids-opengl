@@ -20,6 +20,43 @@ float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 float fov = 45.0f;
 
+const std::vector<std::string> debug_CamDir_str { "", "Forward", "Backward", "Left", "Right" };
+Cam_Dir direction;
+
+static const char* vertex_shader_text =
+"#version 330\n"
+"uniform mat4 MVP;\n"
+"in vec3 vCol;\n"
+"in vec2 vPos;\n"
+"out vec3 color;\n"
+"void main()\n"
+"{\n"
+"    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
+"    color = vCol;\n"
+"}\n";
+
+static const char* fragment_shader_text =
+"#version 330\n"
+"in vec3 color;\n"
+"out vec4 fragment;\n"
+"void main()\n"
+"{\n"
+"    fragment = vec4(color, 1.0);\n"
+"}\n";
+
+//static const Vertex vertices[3] =
+//{
+//    { { -0.6f, -0.4f }, { 1.f, 0.f, 0.f } },
+//    { {  0.6f, -0.4f }, { 0.f, 1.f, 0.f } },
+//    { {   0.f,  0.6f }, { 0.f, 0.f, 1.f } } 
+//};
+
+float triangle[] = {
+    -0.5f, -0.5f, 0.0f,
+     0.5f, -0.5f, 0.0f,
+     0.0f,  0.5f, 0.0f
+};
+
 
 Boids::Boids()
 {
@@ -59,13 +96,14 @@ bool Boids::Construct()
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);
 
     if (glewInit() != GLEW_OK)
     {
         std::cout << "\nERROR: Failed to initialize GLEW\n";
         return false;
     }
+
+    glfwSwapInterval(1);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -81,11 +119,12 @@ bool Boids::Construct()
     /********************************************/
     /********************************************/
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, key_callback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 
 
@@ -102,8 +141,10 @@ bool Boids::Construct()
 
 
 void Boids::Start()
-{
+{ 
     InitializeBoids();
+
+    //BuffersAndShaders();
 
     // Main Loop
     while (!glfwWindowShouldClose(window))
@@ -112,6 +153,7 @@ void Boids::Start()
         fLastFrame = fCurrentFrame;
 
         Update(fDeltaTime);
+        Render();
     }
 
     ImGui_ImplOpenGL3_Shutdown();
@@ -125,20 +167,35 @@ void Boids::Start()
 
 void Boids::Update(float fDeltaTime)
 {
+    fCurrentFrame = static_cast<float>(glfwGetTime());
+    direction = NONE;
     processInput(window);
 
-    debug_fRotAngle += 0.1f;
+    /***********************************************/
+    /*        Set Model / View / Projection        */
+    /***********************************************/
+    glm::mat4 mvp;
+    glm::mat4 model = glm::mat4(1.0f);
+
+    const float ratio = (float)SCR_WIDTH / (float)SCR_HEIGHT;
+    glm::mat4 projection = glm::ortho(-ratio, ratio, -1.0f, 1.0f, 1.0f, -1.0f);
+    //mvp = projection * model;
+
+    //glUseProgram(program);
+    //glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) &mvp);
+    shader.SetMat4("projection", projection);
+    shader.SetMat4("view", glm::mat4(1.0f));
+    shader.Use();
+
     //UpdateBoids();
-    Render();
 }
 
 
 void Boids::Render()
 {
     glClearColor(0.05f, 0.05f, 0.25f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glfwPollEvents();
+    glClear(GL_COLOR_BUFFER_BIT);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (bCursor == false)
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -195,6 +252,12 @@ void Boids::Render()
             ImGui::Begin("Debug", &debug);
             ImGui::Text("Debug info here");
             ImGui::Text(sDebugInfo.c_str());
+            std::string cCamPos = glm::to_string(vCameraPos).c_str();
+            const char* c = cCamPos.c_str();
+            ImGui::Text("Camera Position: %s", c);
+            ImGui::Text(debug_CamDir_str[direction].c_str());
+            ImGui::Text("fDeltaTime: %d", fDeltaTime);
+
             if (ImGui::Button("Close"))
                 debug = false;
             ImGui::End();
@@ -205,31 +268,21 @@ void Boids::Render()
 
     }
 
-
-    /***********************************************/
-    /*        Set Model / View / Projection        */
-    /***********************************************/
-    glm::mat4 projection = glm::perspective(glm::radians<float>(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
-    glm::mat4 view = glm::lookAt(vCameraPos, vCameraPos + vFront, vUp);
-    shader.SetMat4("projection", projection);
-    shader.SetMat4("view", view);
-
-    shader.Use();
-    for(auto &b : vFlock)
+    for (auto &b : vFlock)
     {
-        sDebugInfo = glm::to_string(b.Draw(shader, debug_fRotAngle));
+        b.Draw(shader);
     }
 
-
     glfwSwapBuffers(window);
+    glfwPollEvents();
 }
 
 
-void  Boids::InitializeBoids()
+void Boids::InitializeBoids()
 {
     for (int i = 0; i < iNumBoids; i++)
     {
-        Boid b(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+        Boid b(glm::vec2(SCR_WIDTH / 2.0f, SCR_HEIGHT / 2.0f), glm::vec2(0.0f, 0.0f));
         b.SetColor(glm::vec3(1.0f, 1.0f, 1.0f));
         vFlock.push_back(b);
     }
@@ -238,7 +291,7 @@ void  Boids::InitializeBoids()
 
 void Boids::UpdateBoids()
 {
-    glm::vec3 v1, v2, v3;
+    glm::vec2 v1, v2, v3;
     for (int i = 0; i < vFlock.size(); i++)
     {
         v1 = Rule1(vFlock[i], i);
@@ -252,9 +305,9 @@ void Boids::UpdateBoids()
 }
 
 
-glm::vec3 Boids::Rule1(Boid b, int iCurBoidPos)
+glm::vec2 Boids::Rule1(Boid b, int iCurBoidPos)
 {
-    glm::vec3 vPCenterOfMass = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec2 vPCenterOfMass = glm::vec2(0.0f, 0.0f);
 
     for (int i = 0; i < vFlock.size(); i++)
     {
@@ -269,9 +322,9 @@ glm::vec3 Boids::Rule1(Boid b, int iCurBoidPos)
     return vPCenterOfMass / 100.0f;
 }
 
-glm::vec3 Boids::Rule2(Boid b, int iCurBoidPos)
+glm::vec2 Boids::Rule2(Boid b, int iCurBoidPos)
 {
-    glm::vec3 c(0.0f, 0.0f, 0.0f);
+    glm::vec2 c(0.0f, 0.0f);
 
     for (int i = 0; i < vFlock.size(); i++)
     {
@@ -288,9 +341,9 @@ glm::vec3 Boids::Rule2(Boid b, int iCurBoidPos)
 }
 
 
-glm::vec3 Boids::Rule3(Boid b, int iCurBoidPos)
+glm::vec2 Boids::Rule3(Boid b, int iCurBoidPos)
 {
-    glm::vec3 vPVel;
+    glm::vec2 vPVel;
 
     for (int i = 0; i < vFlock.size(); i++)
     {
@@ -308,43 +361,6 @@ glm::vec3 Boids::Rule3(Boid b, int iCurBoidPos)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
-}
-
-
-void mouse_callback(GLFWwindow* window, double xPosIn, double yPosIn)
-{
-    float xpos = static_cast<float>(xPosIn);
-    float ypos = static_cast<float>(yPosIn);
-
-    if (firstMouse)
-    {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
-
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos;
-    lastX = xpos;
-    lastY = ypos;
-
-    float sensitivity = 0.1f;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
-    if (pitch > 89.0f)
-        pitch = 89.0f;
-    if (pitch < -89.0f)
-        pitch = -89.0f;
-
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    vFront = glm::normalize(front);
 }
 
 
@@ -373,11 +389,23 @@ void processInput(GLFWwindow* window)
     float cameraSpeed = static_cast<float>(2.5f * fDeltaTime);
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    {
         vCameraPos += cameraSpeed * vFront;
+        direction = FORWARD;
+    }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    {
         vCameraPos -= cameraSpeed * vFront;
+        direction = BACKWARD;
+    }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    {
         vCameraPos -= glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
+        direction = LEFT;
+    }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    {
         vCameraPos += glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
+        direction = RIGHT;
+    }
 }
