@@ -8,7 +8,7 @@
 
 typedef struct Vertex
 {
-    glm::vec2 pos;
+    glm::vec3 pos;
 } Vertex;
 
 
@@ -17,14 +17,21 @@ class Boid
 {
     private:
         glm::vec3 m_vColor;
+        glm::vec3 vScale = glm::vec3(0.05f, 0.05f, 1.0f);
 
     public:
         static constexpr Vertex vertices[3] =
         {
-            { { -0.6f, -0.4f } },
-            { {  0.6f, -0.4f } },
-            { {  0.0f,  0.6f } } 
+            { { -0.6f, -0.4f, 0.0f } },
+            { {  0.6f, -0.4f, 0.0f } },
+            { {  0.0f,  0.6f, 0.0f } } 
         };
+//        static constexpr Vertex vertices[3] =
+//        {
+//            { { -0.6f, -0.4f, 0.0f } },
+//            { {  0.6f, -0.4f, 0.0f } },
+//            { {  0.0f,  0.6f, 0.0f } } 
+//        };
 
         static constexpr float triangle[] = {
             -0.5f, -0.5f, 0.0f,
@@ -75,12 +82,12 @@ class Boid
             -0.5f,  0.5f,  0.5f, 
             -0.5f,  0.5f, -0.5f, 
         };
-        glm::vec2 vPos;
-        glm::vec2 vVel;
+        glm::vec3 vPos;
+        glm::vec3 vVel;
 
         unsigned int VBO, VAO, EBO;
 
-        Boid(glm::vec2 pos, glm::vec2 vel);
+        Boid(glm::vec3 pos, glm::vec3 vel);
         ~Boid();
 
         void SetColor(glm::vec3 color);

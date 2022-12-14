@@ -18,7 +18,8 @@ find_package(GLEW REQUIRED)
 add_executable(${PROJECT_NAME} src/main.cpp
     src/Boids.cpp
     src/Boid.cpp
-    src/Shader.cpp)
+    src/Shader.cpp
+    src/math_util.cpp)
 
 add_subdirectory(external/glfw)
 add_subdirectory(external/imgui)

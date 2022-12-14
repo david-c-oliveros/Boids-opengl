@@ -1,7 +1,7 @@
 #include "Boid.h"
 
 
-Boid::Boid(glm::vec2 pos, glm::vec2 vel)
+Boid::Boid(glm::vec3 pos, glm::vec3 vel)
     : vPos(pos), vVel(vel)
 {
     SetupMesh();
@@ -47,7 +47,9 @@ glm::mat4 Boid::Draw(Shader &shader)
 {
     glm::mat4 model = glm::mat4(1.0f);
     //model = glm::rotate(model, glm::radians(fRotAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-    //model = glm::translate(model, vPos);
+    //model = glm::translate(model, glm::vec3(2.0f, 20.0f, 0.0f));
+    model = glm::translate(model, vPos);
+    model = glm::scale(model, vScale);
     shader.SetMat4("model", model);
 
     shader.SetVec3("vColor", m_vColor);

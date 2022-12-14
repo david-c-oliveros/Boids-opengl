@@ -12,13 +12,18 @@ glm::vec3 vCameraPos = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 vFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 vUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
+Cam_Dir direction;
+
 bool firstMouse = true;
 bool bCursor = false;
+bool bRun = true;
 float yaw = -90.0f;
 float pitch = 0.0f;
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 float fov = 45.0f;
+
+glm::vec3 boidPos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 Boids::Boids()
 {
@@ -145,7 +150,8 @@ void Boids::Update(float fDeltaTime)
     shader.SetMat4("view", glm::mat4(1.0f));
     shader.Use();
 
-    //UpdateBoids();
+    if (bRun)
+        UpdateBoids();
 }
 
 
@@ -194,16 +200,8 @@ void Boids::Render()
 
             ImGui::End();
         }
-        // Show another simple window
-        if (show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window);
-            ImGui::Text("Hello from another window");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
-        }
 
+        // Debug window
         if (debug)
         {
             ImGui::Begin("Debug", &debug);
@@ -212,8 +210,9 @@ void Boids::Render()
             std::string cCamPos = glm::to_string(vCameraPos).c_str();
             const char* c = cCamPos.c_str();
             ImGui::Text("Camera Position: %s", c);
-            ImGui::Text(debug_CamDir_str[direction].c_str());
             ImGui::Text("fDeltaTime: %d", fDeltaTime);
+            ImGui::Text("Boid #0 Position: %s", glm::to_string(vFlock[0].vPos).c_str());
+            ImGui::Text("Boid #0 Velocity: %s", glm::to_string(vFlock[0].vVel).c_str());
 
             if (ImGui::Button("Close"))
                 debug = false;
@@ -239,7 +238,9 @@ void Boids::InitializeBoids()
 {
     for (int i = 0; i < iNumBoids; i++)
     {
-        Boid b(glm::vec2(SCR_WIDTH / 2.0f, SCR_HEIGHT / 2.0f), glm::vec2(0.0f, 0.0f));
+        glm::vec3 pos = math_util::remap(glm::vec3(i * 1.0f, i * 1.0f, 0.0f), 0.0f, (float)iNumBoids, -1.0f, 1.0f);
+        std::cout << "Boid #" << i << ": " << glm::to_string(pos) << std::endl;
+        Boid b(pos, glm::vec3(0.0f, 0.0f, 0.0f));
         b.SetColor(glm::vec3(1.0f, 1.0f, 1.0f));
         vFlock.push_back(b);
     }
@@ -248,27 +249,30 @@ void Boids::InitializeBoids()
 
 void Boids::UpdateBoids()
 {
-    glm::vec2 v1, v2, v3;
+    //vFlock[0].vPos = boidPos;
+    glm::vec3 v1, v2, v3, v4;
     for (int i = 0; i < vFlock.size(); i++)
     {
-        v1 = Rule1(vFlock[i], i);
-        v2 = Rule2(vFlock[i], i);
-        v3 = Rule3(vFlock[i], i);
+        v1 = Rule1(i);
+        v2 = Rule2(i);
+        v3 = Rule3(i);
+        v4 = BoundPos(vFlock[i]);
 
-        vFlock[i].vVel = vFlock[i].vVel + v1 + v2 + v3;
-        vFlock[i].vPos = vFlock[i].vPos + vFlock[i].vVel;
+        vFlock[i].vVel = vFlock[i].vVel + v1 + v2 + v3 + v4;
+        LimitVel(vFlock[i]);
+        vFlock[i].vPos = (vFlock[i].vPos + vFlock[i].vVel);
     }
 
 }
 
 
-glm::vec2 Boids::Rule1(Boid b, int iCurBoidPos)
+glm::vec3 Boids::Rule1(int iBoidIndex)
 {
-    glm::vec2 vPCenterOfMass = glm::vec2(0.0f, 0.0f);
+    glm::vec3 vPCenterOfMass = glm::vec3(0.0f, 0.0f, 0.0f);
 
     for (int i = 0; i < vFlock.size(); i++)
     {
-        if (i == iCurBoidPos)
+        if (i == iBoidIndex)
             continue;
 
         vPCenterOfMass += vFlock[i].vPos;
@@ -279,18 +283,18 @@ glm::vec2 Boids::Rule1(Boid b, int iCurBoidPos)
     return vPCenterOfMass / 100.0f;
 }
 
-glm::vec2 Boids::Rule2(Boid b, int iCurBoidPos)
+glm::vec3 Boids::Rule2(int iBoidIndex)
 {
-    glm::vec2 c(0.0f, 0.0f);
+    glm::vec3 c(0.0f, 0.0f, 0.0f);
 
     for (int i = 0; i < vFlock.size(); i++)
     {
-        if (i == iCurBoidPos)
+        if (i == iBoidIndex)
             continue;
 
-        if (glm::length(vFlock[i].vPos - b.vPos) < 100.0f)  // TODO Fix for vector
+        if (glm::length(vFlock[i].vPos - vFlock[iBoidIndex].vPos) < 100.0f)
         {
-            c = c - (vFlock[i].vPos - b.vPos);
+            c = c - (vFlock[i].vPos - vFlock[iBoidIndex].vPos);
         }
     }
 
@@ -298,20 +302,48 @@ glm::vec2 Boids::Rule2(Boid b, int iCurBoidPos)
 }
 
 
-glm::vec2 Boids::Rule3(Boid b, int iCurBoidPos)
+glm::vec3 Boids::Rule3(int iBoidIndex)
 {
-    glm::vec2 vPVel;
+    glm::vec3 vPVel = glm::vec3(0.0f, 0.0f, 0.0f);
 
     for (int i = 0; i < vFlock.size(); i++)
     {
-        if (i == iCurBoidPos)
+        if (i == iBoidIndex)
             continue;
         vPVel = vPVel + vFlock[i].vVel;
     }
 
     vPVel = vPVel / (vFlock.size() - 1.0f);
 
-    return (vPVel - b.vVel) / 8.0f;
+    return (vPVel - vFlock[iBoidIndex].vVel) / 8.0f;
+}
+
+
+glm::vec3 Boids::BoundPos(Boid b)
+{
+    glm::vec3 v = glm::vec3(0.0f, 0.0f, 0.0f);
+
+    if (b.vPos.x < vMin.x)
+        v.x = -0.9f;
+    else if(b.vPos.x > vMax.x)
+        v.x = 0.9f;
+
+    if (b.vPos.x < vMin.y)
+        v.y = -0.9f;
+    else if(b.vPos.x > vMax.y)
+        v.y = 0.9f;
+
+    return v;
+}
+
+
+void Boids::LimitVel(Boid &b)
+{
+    glm::vec3 vLim = glm::vec3(0.001f, 0.001f, 0.0f);
+
+    b.vVel = glm::clamp(b.vVel, -vLim, vLim);
+//    if (abs(glm::length(b.vVel)) > vLim)
+//        b.vVel = (b.vVel / abs(b.vVel) * vLim);
 }
 
 
@@ -335,6 +367,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 {
     if (key == GLFW_KEY_C && action == GLFW_PRESS)
         bCursor = !bCursor;
+
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+        bRun = !bRun;
 }
 
 
@@ -347,21 +382,25 @@ void processInput(GLFWwindow* window)
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
+        boidPos.y += 0.01f;
         vCameraPos += cameraSpeed * vFront;
         direction = FORWARD;
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
     {
+        boidPos.y -= 0.01f;
         vCameraPos -= cameraSpeed * vFront;
         direction = BACKWARD;
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
     {
+        boidPos.x -= 0.01f;
         vCameraPos -= glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
         direction = LEFT;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     {
+        boidPos.x += 0.01f;
         vCameraPos += glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
         direction = RIGHT;
     }

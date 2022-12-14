@@ -17,6 +17,8 @@
 #include "Boid.h"
 #include "Shader.h"
 
+#include "math_util.h"
+
 
 /************************************/
 /*        Callback Functions        */
@@ -37,7 +39,6 @@ enum Cam_Dir
 };
 
 
-
 class Boids {
 
     private:
@@ -51,10 +52,13 @@ class Boids {
         GLint vpos_location;
         GLint vcol_location;
 
+        glm::vec3 vMin = glm::vec3(-1.0f, -1.0f, 0.0f);
+        glm::vec3 vMax = glm::vec3( 1.0f,  1.0f, 0.0f);
+
         Shader shader;
 
         // ImGui states
-        bool bUI = false;
+        bool bUI = true;
         bool test_triangle = false;
         bool show_demo_window = false;
         bool show_another_window = false;
@@ -64,7 +68,7 @@ class Boids {
         unsigned int VBO, VAO, EBO;
         std::string sDebugInfo;
 
-        int iNumBoids = 1;
+        int iNumBoids = 10;
         std::vector<Boid> vFlock;
 
     public:
@@ -81,9 +85,11 @@ class Boids {
         void InitializeBoids();
         void UpdateBoids();
         void BuffersAndShaders();
-        glm::vec2 Rule1(Boid b, int iCurBoidPos);
-        glm::vec2 Rule2(Boid b, int iCurBoidPos);
-        glm::vec2 Rule3(Boid b, int iCurBoidPos);
+        glm::vec3 Rule1(int iCurBoidPos);
+        glm::vec3 Rule2(int iCurBoidPos);
+        glm::vec3 Rule3(int iCurBoidPos);
+        glm::vec3 BoundPos(Boid b);
+        void LimitVel(Boid &b);
 
 };
 
