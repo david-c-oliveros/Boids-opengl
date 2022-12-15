@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <memory>
 
 #include <GL/glew.h>
 #include<GLFW/glfw3.h>
@@ -28,6 +29,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 void processInput(GLFWwindow* window);
 
 
+enum AppState
+{
+    NORMAL,
+    DEBUG
+};
+
+
 enum Cam_Dir
 {
     NONE,
@@ -41,8 +49,6 @@ enum Cam_Dir
 class Boids {
 
     private:
-        float debug_fRotAngle;
-
         GLFWwindow *window;
         
         GLuint vertex_array;
@@ -59,7 +65,7 @@ class Boids {
         bool show_demo_window = false;
         bool show_another_window = false;
         bool boid_control_panel = true;
-        bool debug = true;
+        bool bDebugScreen = true;
 
         bool bRule1 = true;;
         bool bRule2 = true;;
@@ -80,6 +86,8 @@ class Boids {
 
         int iNumBoids = 100;
         std::vector<Boid> vFlock;
+        //Boid cDebugBoid = Boid(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+        std::unique_ptr<Boid> cDebugBoid;
 
     public:
         Boids();
@@ -90,11 +98,14 @@ class Boids {
         void Update(float fDeltaTime);
         void Render();
         void RenderBoids();
+        void RenderDebugBoid();
         void RenderUI();
 
         void InitializeBoids();
+        void InitializeDebug();
         void ClearBoids();
         void UpdateBoids();
+        void UpdateDebug();
         void BuffersAndShaders();
         glm::vec3 Rule1(int iCurBoidPos);
         glm::vec3 Rule2(int iCurBoidPos);
@@ -106,5 +117,7 @@ class Boids {
         glm::vec3 StrongWind();
 
 };
+
+bool SetState(void* data, int n, const char** out_str);
 
 #endif

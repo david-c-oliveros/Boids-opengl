@@ -17,10 +17,11 @@ Cam_Dir direction;
 
 bool firstMouse = true;
 bool bCursor = false;
-bool bRun = true;
+bool bRun = false;
 bool bScatter = false;
+AppState eState = NORMAL;
 
-glm::vec3 boidPos = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 vDebugBoidPos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 Boids::Boids()
 {
@@ -107,6 +108,7 @@ bool Boids::Construct()
 void Boids::Start()
 { 
     InitializeBoids();
+    InitializeDebug();
 
 
     // Main Loop
@@ -138,7 +140,6 @@ void Boids::Update(float fDeltaTime)
     glfwGetCursorPos(window, &x, &y);
     m_vCursorPos.x = math_util::remap((float)x, 0.0f, SCR_WIDTH, -RATIO, RATIO);
     m_vCursorPos.y = math_util::remap((float)y, 0.0f, SCR_HEIGHT, 1.0f, -1.0f);
-    //m_vCursorPos = glm::vec3((float)x, (float)y, 0.0f);
 
 
     processInput(window);
@@ -156,14 +157,35 @@ void Boids::Update(float fDeltaTime)
     shader.SetMat4("view", glm::mat4(1.0f));
     shader.Use();
 
-    if (bRun)
-        UpdateBoids();
+    switch(eState)
+    {
+        case NORMAL:
+            if (bRun)
+                UpdateBoids();
+            break;
+
+        case DEBUG:
+            if (vFlock.size() > 0)
+                ClearBoids();
+            UpdateDebug();
+            break;
+    }
 }
 
 
 void Boids::Render()
 {
     RenderUI();
+
+    switch(eState)
+    {
+        case NORMAL:
+            RenderBoids();
+            break;
+
+        case DEBUG:
+            RenderDebugBoid();
+    }
     RenderBoids();
 
     glfwSwapBuffers(window);
@@ -180,15 +202,16 @@ void Boids::RenderBoids()
 }
 
 
+void Boids::RenderDebugBoid()
+{
+    cDebugBoid->Draw(shader);
+}
+
+
 void Boids::RenderUI()
 {
     glClearColor(0.05f, 0.05f, 0.25f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-
-    //if (bCursor == false)
-    //    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    //else
-    //    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
     // Start the Dear ImGui frame
     if (bUI)
@@ -209,7 +232,7 @@ void Boids::RenderUI()
 
             ImGui::Text("Here is some text");
             ImGui::Checkbox("Demo Window", &show_demo_window);
-            ImGui::Checkbox("Debug", &debug);
+            ImGui::Checkbox("Debug", &bDebugScreen);
             ImGui::Checkbox("Boid Control Panel", &boid_control_panel);
 
             //ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
@@ -227,28 +250,30 @@ void Boids::RenderUI()
         }
 
         // Debug window
-        if (debug)
+        if (bDebugScreen)
         {
-            ImGui::Begin("Debug", &debug);
+            ImGui::Begin("Debug", &bDebugScreen);
             ImGui::Text("Debug info here");
             ImGui::Text(sDebugInfo.c_str());
             ImGui::Text("fDeltaTime: %f", fDeltaTime);
             ImGui::Text("Cursor Position: %s", glm::to_string(m_vCursorPos).c_str());
-            ImGui::Text("Boid #0 Position: %s", glm::to_string(boidPos).c_str());
+            ImGui::Text("Boid #0 Position: %s", glm::to_string(vDebugBoidPos).c_str());
             ImGui::Text("Boid #0 Velocity: %s", glm::to_string(vFlock[0].vVel).c_str());
 
             if (ImGui::Button("Close"))
-                debug = false;
+                bDebugScreen = false;
             ImGui::End();
         }
 
         // Boid Configs
         if (boid_control_panel)
         {
+
             ImGui::Begin("Boid Control Panel");
 
-            if (ImGui::Button("Close"))
-                boid_control_panel;
+            static int item_current = 0;
+            const char* items[] = { "Normal", "Debug" };
+            ImGui::Combo("One liner test", &item_current, &SetState, items, 2);
 
             ImGui::Checkbox("Rule 1", &bRule1);
             ImGui::Checkbox("Rule 2", &bRule2);
@@ -262,6 +287,9 @@ void Boids::RenderUI()
                 ClearBoids();
                 InitializeBoids();
             }
+
+            if (ImGui::Button("Close"))
+                boid_control_panel = false;
 
             ImGui::End();
         }
@@ -278,12 +306,19 @@ void Boids::InitializeBoids()
     for (int i = 0; i < iNumBoids; i++)
     {
         glm::vec3 pos = math_util::remap(glm::vec3(i * 1.0f, i * 1.0f, 0.0f), 0.0f, (float)iNumBoids, -1.0f, 1.0f);
-        std::cout << "Boid #" << i << ": " << glm::to_string(pos) << std::endl;
         Boid b(pos, glm::vec3(0.0f, 0.0f, 0.0f));
         b.SetColor(glm::vec3(1.0f, 1.0f, 1.0f));
         vFlock.push_back(b);
     }
     vFlock[0].SetColor(glm::vec3(1.0f, 0.0f, 0.0f));
+}
+
+
+void Boids::InitializeDebug()
+{
+    glm::vec3 pos = math_util::remap(glm::vec3(0.0f, 0.0f, 0.0f), 0.0f, 1.0f, -1.0f, 1.0f);
+    cDebugBoid = std::make_unique<Boid> (pos, glm::vec3(0.0f, 0.0f, 0.0f));
+    cDebugBoid->SetColor(glm::vec3(1.0f, 0.0f, 0.5f));
 }
 
 
@@ -338,6 +373,12 @@ void Boids::UpdateBoids()
         LimitVel(vFlock[i]);
         vFlock[i].vPos = (vFlock[i].vPos + vFlock[i].vVel);
     }
+}
+
+
+void Boids::UpdateDebug()
+{
+    cDebugBoid->vPos = vDebugBoidPos;
 }
 
 
@@ -476,6 +517,16 @@ glm::vec3 Boids::StrongWind()
 /*                                  */
 /************************************/
 /************************************/
+bool SetState(void* data, int n, const char** out_str)
+{
+    std::cout << ((const char**)data)[n] << std::endl;
+    eState = (AppState)n;
+    *out_str = ((const char**)data)[n];
+
+    return true;
+}
+
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
@@ -506,25 +557,25 @@ void processInput(GLFWwindow* window)
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
-        boidPos.y += 0.01f;
+        vDebugBoidPos.y += 0.01f;
         vCameraPos += cameraSpeed * vFront;
         direction = FORWARD;
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
     {
-        boidPos.y -= 0.01f;
+        vDebugBoidPos.y -= 0.01f;
         vCameraPos -= cameraSpeed * vFront;
         direction = BACKWARD;
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
     {
-        boidPos.x -= 0.01f;
+        vDebugBoidPos.x -= 0.01f;
         vCameraPos -= glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
         direction = LEFT;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     {
-        boidPos.x += 0.01f;
+        vDebugBoidPos.x += 0.01f;
         vCameraPos += glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
         direction = RIGHT;
     }
