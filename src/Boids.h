@@ -24,7 +24,6 @@
 /*        Callback Functions        */
 /************************************/
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void processInput(GLFWwindow* window);
 
@@ -59,7 +58,16 @@ class Boids {
         bool test_triangle = false;
         bool show_demo_window = false;
         bool show_another_window = false;
+        bool boid_control_panel = true;
         bool debug = true;
+
+        bool bRule1 = true;;
+        bool bRule2 = true;;
+        bool bRule3 = true;;
+        bool bBoundPos = true;
+        bool bTendToPlace = true;
+        bool bTendAwayFromPlace = false;
+        bool bStrongWind = true;
 
         // Debug
         glm::vec3 m_vBoundPos = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -85,6 +93,7 @@ class Boids {
         void RenderUI();
 
         void InitializeBoids();
+        void ClearBoids();
         void UpdateBoids();
         void BuffersAndShaders();
         glm::vec3 Rule1(int iCurBoidPos);
@@ -92,7 +101,8 @@ class Boids {
         glm::vec3 Rule3(int iCurBoidPos);
         glm::vec3 BoundPos(Boid b);
         void LimitVel(Boid &b);
-        glm::vec3 TendToPlace(Boid b);
+        glm::vec3 TendToPlace(Boid b, glm::vec3 vPlace);
+        glm::vec3 TendAwayFromPlace(Boid b, glm::vec3 vPlace);
         glm::vec3 StrongWind();
 
 };

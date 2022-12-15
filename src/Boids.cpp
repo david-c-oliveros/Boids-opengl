@@ -18,11 +18,7 @@ Cam_Dir direction;
 bool firstMouse = true;
 bool bCursor = false;
 bool bRun = true;
-float yaw = -90.0f;
-float pitch = 0.0f;
-float lastX = SCR_WIDTH / 2.0f;
-float lastY = SCR_HEIGHT / 2.0f;
-float fov = 45.0f;
+bool bScatter = false;
 
 glm::vec3 boidPos = glm::vec3(0.0f, 0.0f, 0.0f);
 
@@ -92,7 +88,6 @@ bool Boids::Construct()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, key_callback);
 
 
@@ -141,9 +136,10 @@ void Boids::Update(float fDeltaTime)
     double x;
     double y;
     glfwGetCursorPos(window, &x, &y);
-    m_vCursorPos = glm::vec3((float)x, (float)y, 0.0f);
+    m_vCursorPos.x = math_util::remap((float)x, 0.0f, SCR_WIDTH, -RATIO, RATIO);
+    m_vCursorPos.y = math_util::remap((float)y, 0.0f, SCR_HEIGHT, 1.0f, -1.0f);
+    //m_vCursorPos = glm::vec3((float)x, (float)y, 0.0f);
 
-    glm::vec3 vPlace = glm::vec3((float)x, (float)y, 0.0f);
 
     processInput(window);
 
@@ -213,14 +209,14 @@ void Boids::RenderUI()
 
             ImGui::Text("Here is some text");
             ImGui::Checkbox("Demo Window", &show_demo_window);
-            ImGui::Checkbox("Another Window", &show_another_window);
             ImGui::Checkbox("Debug", &debug);
+            ImGui::Checkbox("Boid Control Panel", &boid_control_panel);
 
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-            ImGui::ColorEdit3("clear color", (float*)&clear_color);
+            //ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+            //ImGui::ColorEdit3("clear color", (float*)&clear_color);
 
-            if (ImGui::Button("Button"))
-                counter++;
+            //if (ImGui::Button("Button"))
+            //    counter++;
 
             ImGui::SameLine();
             ImGui::Text("counter = %d", counter);
@@ -240,10 +236,33 @@ void Boids::RenderUI()
             ImGui::Text("Cursor Position: %s", glm::to_string(m_vCursorPos).c_str());
             ImGui::Text("Boid #0 Position: %s", glm::to_string(boidPos).c_str());
             ImGui::Text("Boid #0 Velocity: %s", glm::to_string(vFlock[0].vVel).c_str());
-            ImGui::Text("Boid #0 BoundPos Value: %s", glm::to_string(m_vBoundPos).c_str());
 
             if (ImGui::Button("Close"))
                 debug = false;
+            ImGui::End();
+        }
+
+        // Boid Configs
+        if (boid_control_panel)
+        {
+            ImGui::Begin("Boid Control Panel");
+
+            if (ImGui::Button("Close"))
+                boid_control_panel;
+
+            ImGui::Checkbox("Rule 1", &bRule1);
+            ImGui::Checkbox("Rule 2", &bRule2);
+            ImGui::Checkbox("Rule 3", &bRule3);
+            ImGui::Checkbox("Bound Position", &bBoundPos);
+            ImGui::Checkbox("Tend To Place", &bTendToPlace);
+            ImGui::Checkbox("Strong Wind", &bStrongWind);
+            
+            if (ImGui::Button("Reset Simulation"))
+            {
+                ClearBoids();
+                InitializeBoids();
+            }
+
             ImGui::End();
         }
 
@@ -256,11 +275,6 @@ void Boids::RenderUI()
 
 void Boids::InitializeBoids()
 {
-    //glm::vec3 pos = glm::vec3(1.0f, 0.0f, 0.0f);
-    //Boid b(pos, glm::vec3(0.0f, 0.0f, 0.0f));
-    //b.SetColor(glm::vec3(1.0f, 0.0f, 0.0f));
-    //vFlock.push_back(b);
-
     for (int i = 0; i < iNumBoids; i++)
     {
         glm::vec3 pos = math_util::remap(glm::vec3(i * 1.0f, i * 1.0f, 0.0f), 0.0f, (float)iNumBoids, -1.0f, 1.0f);
@@ -273,6 +287,12 @@ void Boids::InitializeBoids()
 }
 
 
+void Boids::ClearBoids()
+{
+    vFlock.clear();
+}
+
+
 /************************************************/
 /************************************************/
 /*                                              */
@@ -282,21 +302,39 @@ void Boids::InitializeBoids()
 /************************************************/
 void Boids::UpdateBoids()
 {
-    vFlock[0].vPos = boidPos;
+    glm::vec3 v1 = glm::vec3(0.0f);
+    glm::vec3 v2 = glm::vec3(0.0f);
+    glm::vec3 v3 = glm::vec3(0.0f);
+    glm::vec3 v4 = glm::vec3(0.0f);
+    glm::vec3 v5 = glm::vec3(0.0f);
+    glm::vec3 v6 = glm::vec3(0.0f);
+    glm::vec3 v7 = glm::vec3(0.0f);
 
-    glm::vec3 v1, v2, v3, v4, v5, v6;
-
-    for (int i = 1; i < vFlock.size(); i++)
+    for (int i = 0; i < vFlock.size(); i++)
     {
-        v1 = Rule1(i);
-        v2 = Rule2(i);
-        v3 = Rule3(i);
-        v4 = BoundPos(vFlock[i]);
-        v5 = TendToPlace(vFlock[i]);
-        v6 = StrongWind();
+        if (!bScatter & bRule1)
+            v1 = Rule1(i);
+
+        if (bRule1)
+            v2 = Rule2(i);
+
+        if (!bRule1)
+            v3 = Rule3(i);
+
+        if (bBoundPos)
+            v4 = BoundPos(vFlock[i]);
+
+        if (bTendToPlace)
+            v5 = TendToPlace(vFlock[i], m_vCursorPos);
+        else
+            v7 = TendAwayFromPlace(vFlock[i], m_vCursorPos);
+
+        if (bStrongWind)
+            v6 = StrongWind();
+
         m_vBoundPos = v4;
 
-        vFlock[i].vVel = vFlock[i].vVel + v1 + v2 + v3 + v4 + v5;
+        vFlock[i].vVel = vFlock[i].vVel + v1 + v2 + v3 + v4 + v5 + v7;
         LimitVel(vFlock[i]);
         vFlock[i].vPos = (vFlock[i].vPos + vFlock[i].vVel);
     }
@@ -324,7 +362,7 @@ glm::vec3 Boids::Rule1(int iBoidIndex)
 
     vPCenterOfMass = vPCenterOfMass / (vFlock.size() - 1.0f);
 
-    return vPCenterOfMass / 1000.0f;
+    return (vPCenterOfMass - vFlock[iBoidIndex].vPos) / 100.0f;
 }
 
 
@@ -383,8 +421,8 @@ glm::vec3 Boids::BoundPos(Boid b)
 {
     glm::vec3 v = glm::vec3(0.0f, 0.0f, 0.0f);
 
-    glm::vec3 vMin = glm::vec3(-RATIO + 0.5f, -0.5, 0.0f);
-    glm::vec3 vMax = glm::vec3( RATIO - 0.5f,  0.5f, 0.0f);
+    glm::vec3 vMin = glm::vec3(-RATIO + 0.0f, -1.0, 0.0f);
+    glm::vec3 vMax = glm::vec3( RATIO - 0.0f,  1.0f, 0.0f);
 
     bool oob = false;
 
@@ -410,13 +448,17 @@ void Boids::LimitVel(Boid &b)
 }
 
 
-glm::vec3 Boids::TendToPlace(Boid b)
+glm::vec3 Boids::TendToPlace(Boid b, glm::vec3 vPlace)
 {
-    glm::vec3 vPlace = glm::vec3(0.0f);
-    vPlace.x = math_util::remap(m_vCursorPos.x, 0.0f, SCR_WIDTH, -RATIO, RATIO);
-    vPlace.y = math_util::remap(m_vCursorPos.y, 0.0f, SCR_HEIGHT, 1.0f, -1.0f);
-
     return (vPlace - b.vPos) / 100.0f;
+}
+
+
+glm::vec3 Boids::TendAwayFromPlace(Boid b, glm::vec3 vPlace)
+{
+    float m = 1.0f;
+
+    return (TendToPlace(b, vPlace) * -m);
 }
 
 
@@ -440,16 +482,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-    fov -= (float)yoffset;
-    if (fov < 1.0f)
-        fov = 1.0f;
-    if (fov > 45.0f)
-        fov = 45.0f;
-}
-
-
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_C && action == GLFW_PRESS)
@@ -464,6 +496,11 @@ void processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS)
+        bScatter = true;
+    else
+        bScatter = false;
 
     float cameraSpeed = static_cast<float>(2.5f * fDeltaTime);
 

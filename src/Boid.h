@@ -17,7 +17,7 @@ class Boid
 {
     private:
         glm::vec3 m_vColor;
-        glm::vec3 vScale = glm::vec3(0.05f, 0.05f, 1.0f);
+        glm::vec3 vScale = glm::vec3(0.02f, 0.02f, 1.0f);
 
     public:
         static constexpr Vertex vertices[3] =
@@ -26,12 +26,6 @@ class Boid
             { {  0.6f, -0.4f, 0.0f } },
             { {  0.0f,  0.6f, 0.0f } } 
         };
-//        static constexpr Vertex vertices[3] =
-//        {
-//            { { -0.6f, -0.4f, 0.0f } },
-//            { {  0.6f, -0.4f, 0.0f } },
-//            { {  0.0f,  0.6f, 0.0f } } 
-//        };
 
         static constexpr float triangle[] = {
             -0.5f, -0.5f, 0.0f,
