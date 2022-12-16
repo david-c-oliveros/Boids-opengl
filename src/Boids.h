@@ -10,6 +10,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/intersect.hpp>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>

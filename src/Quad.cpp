@@ -19,6 +19,12 @@ void Quad::SetColor(glm::vec3 color)
 }
 
 
+void Quad::SetScale(glm::vec3 scale)
+{
+    m_vScale = scale;
+}
+
+
 void Quad::SetupMesh()
 {
     // Vertex Buffer
@@ -49,8 +55,8 @@ void Quad::Draw(Shader &shader)
     //model = glm::rotate(model, glm::radians(fRotAngle), glm::vec3(0.0f, 1.0f, 0.0f));
     //model = glm::translate(model, glm::vec3(2.0f, 20.0f, 0.0f));
     model = glm::translate(model, vPos);
-    model = glm::scale(model, vScale);
-    model = glm::translate(model, vOffset);
+    model = glm::scale(model, m_vScale);
+    model = glm::translate(model, m_vOffset);
     shader.SetMat4("model", model);
 
     shader.SetVec3("vColor", m_vColor);

@@ -12,8 +12,8 @@ class Quad
 {
     private:
         glm::vec3 m_vColor = glm::vec3(1.0f, 1.0f, 1.0f);
-        glm::vec3 vScale = glm::vec3(170.0f, 170.0f, 1.0f);
-        glm::vec3 vOffset = glm::vec3(0.25f, 0.25f, 0.0f);
+        glm::vec3 m_vScale = glm::vec3(1.0f, 1.0f, 1.0f);
+        glm::vec3 m_vOffset = glm::vec3(0.25f, 0.25f, 0.0f);
 
     public:
         static constexpr glm::vec3 vertices[6] =
@@ -35,6 +35,7 @@ class Quad
         ~Quad();
 
         void SetColor(glm::vec3 color);
+        void SetScale(glm::vec3 scale);
 
         void SetupMesh();
         void Draw(Shader &shader);

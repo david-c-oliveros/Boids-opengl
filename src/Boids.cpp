@@ -116,6 +116,7 @@ void Boids::Start()
 
     cBg = std::make_unique<Quad>(glm::vec3(0.0f, 0.0f, 0.0f));
     cBg->SetColor(glm::vec3(0.2f, 0.2f, 0.5f));
+    cBg->SetScale(glm::vec3(400.0f, 400.0f, 0.0f));
 
 
     // Main Loop
@@ -163,6 +164,7 @@ void Boids::Update(float fDeltaTime)
     glm::vec3 vCameraPos_ortho = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 vCameraPos_persp = glm::vec3(0.0f, 0.0f, -100.0f);
     glm::vec3 vTargetPos = glm::vec3(0.0f, 0.0f,  0.0f);
+    glm::vec3 vUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
     /******************************/
     /*        Orthographic        */
@@ -175,10 +177,45 @@ void Boids::Update(float fDeltaTime)
     /*****************************/
     /*        Perspective        */
     /*****************************/
-    glm::mat4 projection = glm::perspective(glm::radians<float>(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+    glm::mat4 projection = glm::perspective(glm::radians<float>(90.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
     glm::mat4 view = glm::mat4(1.0f);
-    view = glm::lookAt(vCameraPos_persp, vTargetPos,
-                       glm::vec3(0.0f, 1.0f,  0.0f));
+    view = glm::lookAt(vCameraPos_persp, vTargetPos, vUp);
+
+
+    /****************************************************/
+    /****************************************************/
+    /*                                                  */
+    /*        Get Cursor Position in World Space        */
+    /*                                                  */
+    /****************************************************/
+    /****************************************************/
+    glm::vec3 vCursorOrigin = glm::vec3(0.0f);
+    glm::vec3 vCursorDir = glm::vec3(
+            2.0f * ((m_vCursorPos.x) / (float)(SCR_WIDTH) - 0.5f) / projection[0][0],
+            2.0f * ((m_vCursorPos.y) / (float)(SCR_HEIGHT) - 0.5f) / projection[1][1],
+            1.0f );
+
+    glm::mat4 mCursorView = glm::lookAt(vCameraPos_persp, vTargetPos, vUp);
+    mCursorView = glm::inverse(mCursorView);
+
+    vCursorOrigin = glm::vec3(mCursorView * glm::vec4(vCursorOrigin, 1.0f));
+    vCursorDir = glm::vec3(mCursorView * glm::vec4(vCursorDir, 1.0f));
+
+    vCursorDir = vCursorDir + vCursorOrigin;
+    std::cout << glm::to_string(vCursorDir) << std::endl;
+
+    glm::vec3 vGroundPlane_p = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 vGroundPlane_n = glm::vec3(0.0f, 0.0f, 1.0f);
+    float fRayLength = 2.0f;
+
+    // TODO - Implement mouse picking
+    glm::vec3 vCursorWorldPos;
+    // WHY DOES THIS NOT RETURN POSITION OF INTERSECTION????
+    bool bIntersect = glm::intersectRayPlane(vCursorOrigin, vCursorDir, vGroundPlane_p, vGroundPlane_n, fRayLength);
+    std::cout << "Intersect?: " << bIntersect << std::endl;
+    std::cout << "Length of intersection: " << fRayLength << std::endl;
+
+
 
     shader.SetMat4("projection", projection);
     shader.SetMat4("view", view);
