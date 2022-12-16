@@ -1,17 +1,21 @@
 #include "Boids.h"
 
 
-unsigned int SCR_WIDTH = 1920;
-unsigned int SCR_HEIGHT = 1080;
+unsigned int SCR_WIDTH = 2000;
+unsigned int SCR_HEIGHT = 2000;
+
+//unsigned int SCR_WIDTH = 1920;
+//unsigned int SCR_HEIGHT = 1080;
+
 float RATIO = (float)SCR_WIDTH / (float)SCR_HEIGHT;
 
 float fDeltaTime = 0.0f;
 float fLastFrame = 0.0f;
 float fCurrentFrame = 0.0f;
 
-glm::vec3 vCameraPos = glm::vec3(0.0f, 0.0f, 0.0f);
-glm::vec3 vFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 vUp = glm::vec3(0.0f, 1.0f, 0.0f);
+//glm::vec3 vCameraPos = glm::vec3(0.0f, 0.0f, 0.0f);
+//glm::vec3 vFront = glm::vec3(0.0f, 0.0f, -1.0f);
+//glm::vec3 vUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 Cam_Dir direction;
 
@@ -19,9 +23,9 @@ bool firstMouse = true;
 bool bCursor = false;
 bool bRun = false;
 bool bScatter = false;
-AppState eState = NORMAL;
+AppState eState = DEBUG;
 
-glm::vec3 vDebugBoidPos = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 vDebugBoidPos = glm::vec3(0.0f, 0.0f, 8.0f);
 
 Boids::Boids()
 {
@@ -110,6 +114,9 @@ void Boids::Start()
     InitializeBoids();
     InitializeDebug();
 
+    cBg = std::make_unique<Quad>(glm::vec3(0.0f, 0.0f, 0.0f));
+    cBg->SetColor(glm::vec3(0.2f, 0.2f, 0.5f));
+
 
     // Main Loop
     while (!glfwWindowShouldClose(window))
@@ -138,8 +145,9 @@ void Boids::Update(float fDeltaTime)
     double x;
     double y;
     glfwGetCursorPos(window, &x, &y);
-    m_vCursorPos.x = math_util::remap((float)x, 0.0f, SCR_WIDTH, -RATIO, RATIO);
-    m_vCursorPos.y = math_util::remap((float)y, 0.0f, SCR_HEIGHT, 1.0f, -1.0f);
+    m_vCursorPos = glm::vec3(x, y, 0.0f);
+    //m_vCursorPos.x = math_util::remap((float)x, 0.0f, SCR_WIDTH, -RATIO, RATIO);
+    //m_vCursorPos.y = math_util::remap((float)y, 0.0f, SCR_HEIGHT, 1.0f, -1.0f);
 
 
     processInput(window);
@@ -151,10 +159,29 @@ void Boids::Update(float fDeltaTime)
     glm::mat4 model = glm::mat4(1.0f);
 
     const float ratio = (float)SCR_WIDTH / (float)SCR_HEIGHT;
-    glm::mat4 projection = glm::ortho(-ratio, ratio, -1.0f, 1.0f, 1.0f, -1.0f);
+
+    glm::vec3 vCameraPos_ortho = glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 vCameraPos_persp = glm::vec3(0.0f, 0.0f, -100.0f);
+    glm::vec3 vTargetPos = glm::vec3(0.0f, 0.0f,  0.0f);
+
+    /******************************/
+    /*        Orthographic        */
+    /******************************/
+    //glm::mat4 projection = glm::lookAt(vCameraPos_ortho, vTargetPos, glm::vec3(0.0f, 1.0f, 0.0f));
+    //glm::mat4 projection = glm::ortho(0.0f, SCR_WIDTH, SCR_HEIGHT, 0.0f, -1.0f, 0.0f);
+    // TODO - Which of the above projection matices do I use???  And what do I use for the view matrix??
+    //glm::mat4 view = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 1000.0f);
+
+    /*****************************/
+    /*        Perspective        */
+    /*****************************/
+    glm::mat4 projection = glm::perspective(glm::radians<float>(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+    glm::mat4 view = glm::mat4(1.0f);
+    view = glm::lookAt(vCameraPos_persp, vTargetPos,
+                       glm::vec3(0.0f, 1.0f,  0.0f));
 
     shader.SetMat4("projection", projection);
-    shader.SetMat4("view", glm::mat4(1.0f));
+    shader.SetMat4("view", view);
     shader.Use();
 
     switch(eState)
@@ -175,6 +202,11 @@ void Boids::Update(float fDeltaTime)
 
 void Boids::Render()
 {
+    glClearColor(0.05f, 0.05f, 0.25f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    cBg->Draw(shader);
+
     RenderUI();
 
     switch(eState)
@@ -186,7 +218,6 @@ void Boids::Render()
         case DEBUG:
             RenderDebugBoid();
     }
-    RenderBoids();
 
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -210,9 +241,6 @@ void Boids::RenderDebugBoid()
 
 void Boids::RenderUI()
 {
-    glClearColor(0.05f, 0.05f, 0.25f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
     // Start the Dear ImGui frame
     if (bUI)
     {
@@ -256,8 +284,9 @@ void Boids::RenderUI()
             ImGui::Text("Debug info here");
             ImGui::Text(sDebugInfo.c_str());
             ImGui::Text("fDeltaTime: %f", fDeltaTime);
+            ImGui::Text("App State: %s", GetState().c_str());
             ImGui::Text("Cursor Position: %s", glm::to_string(m_vCursorPos).c_str());
-            ImGui::Text("Boid #0 Position: %s", glm::to_string(vDebugBoidPos).c_str());
+            ImGui::Text("Boid #0 Position: %s", glm::to_string(cDebugBoid->vPos).c_str());
             ImGui::Text("Boid #0 Velocity: %s", glm::to_string(vFlock[0].vVel).c_str());
 
             if (ImGui::Button("Close"))
@@ -271,7 +300,7 @@ void Boids::RenderUI()
 
             ImGui::Begin("Boid Control Panel");
 
-            static int item_current = 0;
+            static int item_current = (int)eState;
             const char* items[] = { "Normal", "Debug" };
             ImGui::Combo("One liner test", &item_current, &SetState, items, 2);
 
@@ -316,7 +345,7 @@ void Boids::InitializeBoids()
 
 void Boids::InitializeDebug()
 {
-    glm::vec3 pos = math_util::remap(glm::vec3(0.0f, 0.0f, 0.0f), 0.0f, 1.0f, -1.0f, 1.0f);
+    glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f);
     cDebugBoid = std::make_unique<Boid> (pos, glm::vec3(0.0f, 0.0f, 0.0f));
     cDebugBoid->SetColor(glm::vec3(1.0f, 0.0f, 0.5f));
 }
@@ -424,7 +453,7 @@ glm::vec3 Boids::Rule2(int iBoidIndex)
         if (i == iBoidIndex)
             continue;
 
-        if (glm::length(vFlock[i].vPos - vFlock[iBoidIndex].vPos) < 0.04f)
+        if (glm::length(vFlock[i].vPos - vFlock[iBoidIndex].vPos) < 1.0f)
         {
             c = c - (vFlock[i].vPos - vFlock[iBoidIndex].vPos) * fInfluence;
         }
@@ -462,10 +491,10 @@ glm::vec3 Boids::BoundPos(Boid b)
 {
     glm::vec3 v = glm::vec3(0.0f, 0.0f, 0.0f);
 
-    glm::vec3 vMin = glm::vec3(-RATIO + 0.0f, -1.0, 0.0f);
-    glm::vec3 vMax = glm::vec3( RATIO - 0.0f,  1.0f, 0.0f);
-
-    bool oob = false;
+    glm::vec3 vMin = glm::vec3( -85.0f, -85.0f, 0.0f );
+    glm::vec3 vMax = glm::vec3(  85.0f,  85.0f, 0.0f );
+    //glm::vec3 vMin = glm::vec3(-RATIO + 0.0f, -1.0, 0.0f);
+    //glm::vec3 vMax = glm::vec3( RATIO - 0.0f,  1.0f, 0.0f);
 
     if (b.vPos.x < vMin.x)
         v.x =  0.4;
@@ -483,7 +512,7 @@ glm::vec3 Boids::BoundPos(Boid b)
 
 void Boids::LimitVel(Boid &b)
 {
-    glm::vec3 vLim = glm::vec3(0.02f, 0.02f, 0.0f);
+    glm::vec3 vLim = glm::vec3(0.2f, 0.2f, 0.0f);
 
     b.vVel = glm::clamp(b.vVel, -vLim, vLim);
 }
@@ -519,11 +548,19 @@ glm::vec3 Boids::StrongWind()
 /************************************/
 bool SetState(void* data, int n, const char** out_str)
 {
-    std::cout << ((const char**)data)[n] << std::endl;
+    //std::cout << ((const char**)data)[n] << std::endl;
     eState = (AppState)n;
     *out_str = ((const char**)data)[n];
 
     return true;
+}
+
+
+std::string GetState()
+{
+    std::string states[] = { "Normal", "Debug" };
+
+    return states[eState];
 }
 
 
@@ -557,26 +594,26 @@ void processInput(GLFWwindow* window)
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
-        vDebugBoidPos.y += 0.01f;
-        vCameraPos += cameraSpeed * vFront;
+        vDebugBoidPos.y += 1.0f;
+        //vCameraPos += cameraSpeed * vFront;
         direction = FORWARD;
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
     {
-        vDebugBoidPos.y -= 0.01f;
-        vCameraPos -= cameraSpeed * vFront;
+        vDebugBoidPos.y -= 1.0f;
+        //vCameraPos -= cameraSpeed * vFront;
         direction = BACKWARD;
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
     {
-        vDebugBoidPos.x -= 0.01f;
-        vCameraPos -= glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
+        vDebugBoidPos.x -= 1.0f;
+        //vCameraPos -= glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
         direction = LEFT;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     {
-        vDebugBoidPos.x += 0.01f;
-        vCameraPos += glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
+        vDebugBoidPos.x += 1.0f;
+        //vCameraPos += glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
         direction = RIGHT;
     }
 }

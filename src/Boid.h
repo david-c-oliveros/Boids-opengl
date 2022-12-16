@@ -17,15 +17,22 @@ class Boid
 {
     private:
         glm::vec3 m_vColor;
-        glm::vec3 vScale = glm::vec3(0.02f, 0.02f, 1.0f);
+        glm::vec3 vScale = glm::vec3(1.0f, 1.0f, 1.0f);
 
     public:
         static constexpr Vertex vertices[3] =
         {
-            { { -0.6f, -0.4f, 0.0f } },
-            { {  0.6f, -0.4f, 0.0f } },
-            { {  0.0f,  0.6f, 0.0f } } 
+            { { -0.5f, -0.5f, 0.0f } },
+            { {  0.5f, -0.5f, 0.0f } },
+            { {  0.0f,  0.5f, 0.0f } } 
         };
+
+//        static constexpr Vertex vertices[3] =
+//        {
+//            { { -0.5f, -0.5f, 0.0f } },
+//            { {  0.5f, -0.5f, 0.0f } },
+//            { {  0.0f,  0.5f, 0.0f } } 
+//        };
 
         static constexpr float triangle[] = {
             -0.5f, -0.5f, 0.0f,
@@ -87,7 +94,7 @@ class Boid
         void SetColor(glm::vec3 color);
 
         void SetupMesh();
-        glm::mat4 Draw(Shader &shader);
+        void Draw(Shader &shader);
 };
 
 #endif

@@ -1,25 +1,25 @@
-#include "Boid.h"
+#include "Quad.h"
 
 
-Boid::Boid(glm::vec3 pos, glm::vec3 vel)
-    : vPos(pos), vVel(vel)
+Quad::Quad(glm::vec3 pos)
+    : vPos(pos)
 {
     SetupMesh();
 }
 
 
-Boid::~Boid()
+Quad::~Quad()
 {
 }
 
 
-void Boid::SetColor(glm::vec3 color)
+void Quad::SetColor(glm::vec3 color)
 {
     m_vColor = color;
 }
 
 
-void Boid::SetupMesh()
+void Quad::SetupMesh()
 {
     // Vertex Buffer
     glGenBuffers(1, &VBO);
@@ -37,26 +37,28 @@ void Boid::SetupMesh()
     //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     //glBufferData(GL_ELEMENT_ARRAY_BUFFER)
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) offsetof(Vertex, pos));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
 
     glBindVertexArray(0);
 }
 
 
-void Boid::Draw(Shader &shader)
+void Quad::Draw(Shader &shader)
 {
     glm::mat4 model = glm::mat4(1.0f);
     //model = glm::rotate(model, glm::radians(fRotAngle), glm::vec3(0.0f, 1.0f, 0.0f));
     //model = glm::translate(model, glm::vec3(2.0f, 20.0f, 0.0f));
     model = glm::translate(model, vPos);
     model = glm::scale(model, vScale);
+    model = glm::translate(model, vOffset);
     shader.SetMat4("model", model);
 
     shader.SetVec3("vColor", m_vColor);
 
     glBindVertexArray(VAO);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
     glBindVertexArray(0);
 }

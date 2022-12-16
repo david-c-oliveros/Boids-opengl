@@ -16,6 +16,7 @@
 #include <backends/imgui_impl_opengl3.h>
 
 #include "Boid.h"
+#include "Quad.h"
 #include "Shader.h"
 
 #include "math_util.h"
@@ -88,6 +89,7 @@ class Boids {
         std::vector<Boid> vFlock;
         //Boid cDebugBoid = Boid(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
         std::unique_ptr<Boid> cDebugBoid;
+        std::unique_ptr<Quad> cBg;
 
     public:
         Boids();
@@ -119,5 +121,6 @@ class Boids {
 };
 
 bool SetState(void* data, int n, const char** out_str);
+std::string GetState();
 
 #endif
