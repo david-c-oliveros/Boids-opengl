@@ -27,19 +27,6 @@ class Boid
             { {  0.0f,  0.5f, 0.0f } } 
         };
 
-//        static constexpr Vertex vertices[3] =
-//        {
-//            { { -0.5f, -0.5f, 0.0f } },
-//            { {  0.5f, -0.5f, 0.0f } },
-//            { {  0.0f,  0.5f, 0.0f } } 
-//        };
-
-        static constexpr float triangle[] = {
-            -0.5f, -0.5f, 0.0f,
-             0.5f, -0.5f, 0.0f,
-             0.0f,  0.5f, 0.0f
-        };
-
         static constexpr float cube[] = {
             -0.5f, -0.5f, -0.5f, 
              0.5f, -0.5f, -0.5f,  

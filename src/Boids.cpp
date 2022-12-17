@@ -23,7 +23,7 @@ bool firstMouse = true;
 bool bCursor = false;
 bool bRun = false;
 bool bScatter = false;
-AppState eState = DEBUG;
+AppState eState = NORMAL;
 
 glm::vec3 vDebugBoidPos = glm::vec3(0.0f, 0.0f, 8.0f);
 
@@ -111,8 +111,8 @@ bool Boids::Construct()
 
 void Boids::Start()
 { 
-    InitializeBoids();
-    InitializeDebug();
+    InitBoids();
+    InitDebug();
 
     cBg = std::make_unique<Quad>(glm::vec3(0.0f, 0.0f, 0.0f));
     cBg->SetColor(glm::vec3(0.2f, 0.2f, 0.5f));
@@ -163,7 +163,9 @@ void Boids::Update(float fDeltaTime)
 
     glm::vec3 vCameraPos_ortho = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 vCameraPos_persp = glm::vec3(0.0f, 0.0f, -100.0f);
-    glm::vec3 vTargetPos = glm::vec3(0.0f, 0.0f,  0.0f);
+    glm::vec3 vLookDir = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 vTargetPos = vCameraPos_persp + vLookDir;
+    //glm::vec3 vTargetPos = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3 vUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
     /******************************/
@@ -180,42 +182,6 @@ void Boids::Update(float fDeltaTime)
     glm::mat4 projection = glm::perspective(glm::radians<float>(90.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
     glm::mat4 view = glm::mat4(1.0f);
     view = glm::lookAt(vCameraPos_persp, vTargetPos, vUp);
-
-
-    /****************************************************/
-    /****************************************************/
-    /*                                                  */
-    /*        Get Cursor Position in World Space        */
-    /*                                                  */
-    /****************************************************/
-    /****************************************************/
-    glm::vec3 vCursorOrigin = glm::vec3(0.0f);
-    glm::vec3 vCursorDir = glm::vec3(
-            2.0f * ((m_vCursorPos.x) / (float)(SCR_WIDTH) - 0.5f) / projection[0][0],
-            2.0f * ((m_vCursorPos.y) / (float)(SCR_HEIGHT) - 0.5f) / projection[1][1],
-            1.0f );
-
-    glm::mat4 mCursorView = glm::lookAt(vCameraPos_persp, vTargetPos, vUp);
-    mCursorView = glm::inverse(mCursorView);
-
-    vCursorOrigin = glm::vec3(mCursorView * glm::vec4(vCursorOrigin, 1.0f));
-    vCursorDir = glm::vec3(mCursorView * glm::vec4(vCursorDir, 1.0f));
-
-    vCursorDir = vCursorDir + vCursorOrigin;
-    std::cout << glm::to_string(vCursorDir) << std::endl;
-
-    glm::vec3 vGroundPlane_p = glm::vec3(0.0f, 0.0f, 0.0f);
-    glm::vec3 vGroundPlane_n = glm::vec3(0.0f, 0.0f, 1.0f);
-    float fRayLength = 2.0f;
-
-    // TODO - Implement mouse picking
-    glm::vec3 vCursorWorldPos;
-    // WHY DOES THIS NOT RETURN POSITION OF INTERSECTION????
-    bool bIntersect = glm::intersectRayPlane(vCursorOrigin, vCursorDir, vGroundPlane_p, vGroundPlane_n, fRayLength);
-    std::cout << "Intersect?: " << bIntersect << std::endl;
-    std::cout << "Length of intersection: " << fRayLength << std::endl;
-
-
 
     shader.SetMat4("projection", projection);
     shader.SetMat4("view", view);
@@ -263,6 +229,8 @@ void Boids::Render()
 
 void Boids::RenderBoids()
 {
+    cControlBoid->Draw(shader);
+
     for (auto &b : vFlock)
     {
         b.Draw(shader);
@@ -272,7 +240,8 @@ void Boids::RenderBoids()
 
 void Boids::RenderDebugBoid()
 {
-    cDebugBoid->Draw(shader);
+    cControlBoid->Draw(shader);
+    cCursorBoid->Draw(shader);
 }
 
 
@@ -323,7 +292,9 @@ void Boids::RenderUI()
             ImGui::Text("fDeltaTime: %f", fDeltaTime);
             ImGui::Text("App State: %s", GetState().c_str());
             ImGui::Text("Cursor Position: %s", glm::to_string(m_vCursorPos).c_str());
-            ImGui::Text("Boid #0 Position: %s", glm::to_string(cDebugBoid->vPos).c_str());
+            ImGui::Text("Cursor World Position: %s", glm::to_string(m_vCursorWorldPos).c_str());
+            ImGui::Text("ray_eye: %s", glm::to_string(ray_eye).c_str());
+            ImGui::Text("Boid #0 Position: %s", glm::to_string(cControlBoid->vPos).c_str());
             ImGui::Text("Boid #0 Velocity: %s", glm::to_string(vFlock[0].vVel).c_str());
 
             if (ImGui::Button("Close"))
@@ -347,11 +318,15 @@ void Boids::RenderUI()
             ImGui::Checkbox("Bound Position", &bBoundPos);
             ImGui::Checkbox("Tend To Place", &bTendToPlace);
             ImGui::Checkbox("Strong Wind", &bStrongWind);
+
+            ImGui::DragInt("Rule #1 Value", &fRule1_scalar);
+            ImGui::DragInt("Rule #2 Value", &fRule2_scalar);
+            ImGui::DragInt("Rule #3 Value", &fRule3_scalar);
             
             if (ImGui::Button("Reset Simulation"))
             {
                 ClearBoids();
-                InitializeBoids();
+                InitBoids();
             }
 
             if (ImGui::Button("Close"))
@@ -367,8 +342,12 @@ void Boids::RenderUI()
 }
 
 
-void Boids::InitializeBoids()
+void Boids::InitBoids()
 {
+    glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f);
+    cControlBoid = std::make_unique<Boid> (pos, glm::vec3(0.0f));
+    cControlBoid->SetColor(glm::vec3(1.0f, 0.0f, 0.5f));
+
     for (int i = 0; i < iNumBoids; i++)
     {
         glm::vec3 pos = math_util::remap(glm::vec3(i * 1.0f, i * 1.0f, 0.0f), 0.0f, (float)iNumBoids, -1.0f, 1.0f);
@@ -376,15 +355,17 @@ void Boids::InitializeBoids()
         b.SetColor(glm::vec3(1.0f, 1.0f, 1.0f));
         vFlock.push_back(b);
     }
-    vFlock[0].SetColor(glm::vec3(1.0f, 0.0f, 0.0f));
 }
 
 
-void Boids::InitializeDebug()
+void Boids::InitDebug()
 {
     glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f);
-    cDebugBoid = std::make_unique<Boid> (pos, glm::vec3(0.0f, 0.0f, 0.0f));
-    cDebugBoid->SetColor(glm::vec3(1.0f, 0.0f, 0.5f));
+    cControlBoid = std::make_unique<Boid> (pos, glm::vec3(0.0f));
+    cControlBoid->SetColor(glm::vec3(1.0f, 0.0f, 0.5f));
+
+    cCursorBoid = std::make_unique<Boid> (pos, glm::vec3(0.0f));
+    cCursorBoid->SetColor(glm::vec3(0.0f, 0.5f, 1.0f));
 }
 
 
@@ -403,6 +384,8 @@ void Boids::ClearBoids()
 /************************************************/
 void Boids::UpdateBoids()
 {
+    cControlBoid->vPos = vDebugBoidPos;
+
     glm::vec3 v1 = glm::vec3(0.0f);
     glm::vec3 v2 = glm::vec3(0.0f);
     glm::vec3 v3 = glm::vec3(0.0f);
@@ -426,7 +409,7 @@ void Boids::UpdateBoids()
             v4 = BoundPos(vFlock[i]);
 
         if (bTendToPlace)
-            v5 = TendToPlace(vFlock[i], m_vCursorPos);
+            v5 = TendToPlace(vFlock[i], cControlBoid->vPos);
         else
             v7 = TendAwayFromPlace(vFlock[i], m_vCursorPos);
 
@@ -444,7 +427,7 @@ void Boids::UpdateBoids()
 
 void Boids::UpdateDebug()
 {
-    cDebugBoid->vPos = vDebugBoidPos;
+    cControlBoid->vPos = vDebugBoidPos;
 }
 
 
@@ -469,7 +452,7 @@ glm::vec3 Boids::Rule1(int iBoidIndex)
 
     vPCenterOfMass = vPCenterOfMass / (vFlock.size() - 1.0f);
 
-    return (vPCenterOfMass - vFlock[iBoidIndex].vPos) / 100.0f;
+    return (vPCenterOfMass - vFlock[iBoidIndex].vPos) / (float)fRule1_scalar;
 }
 
 
@@ -482,7 +465,7 @@ glm::vec3 Boids::Rule1(int iBoidIndex)
 /**********************************************************************************/
 glm::vec3 Boids::Rule2(int iBoidIndex)
 {
-    float fInfluence = 1.0f;
+    float fMinDis = 1.0f;
     glm::vec3 c(0.0f, 0.0f, 0.0f);
 
     for (int i = 0; i < vFlock.size(); i++)
@@ -490,9 +473,9 @@ glm::vec3 Boids::Rule2(int iBoidIndex)
         if (i == iBoidIndex)
             continue;
 
-        if (glm::length(vFlock[i].vPos - vFlock[iBoidIndex].vPos) < 1.0f)
+        if (glm::length(vFlock[i].vPos - vFlock[iBoidIndex].vPos) < fMinDis)
         {
-            c = c - (vFlock[i].vPos - vFlock[iBoidIndex].vPos) * fInfluence;
+            c = c - (vFlock[i].vPos - vFlock[iBoidIndex].vPos) * (float)fRule2_scalar;
         }
     }
 
@@ -520,7 +503,7 @@ glm::vec3 Boids::Rule3(int iBoidIndex)
 
     vPVel = vPVel / (vFlock.size() - 1.0f);
 
-    return (vPVel - vFlock[iBoidIndex].vVel) / 64.0f;
+    return (vPVel - vFlock[iBoidIndex].vVel) / (float)fRule3_scalar;
 }
 
 
@@ -528,10 +511,8 @@ glm::vec3 Boids::BoundPos(Boid b)
 {
     glm::vec3 v = glm::vec3(0.0f, 0.0f, 0.0f);
 
-    glm::vec3 vMin = glm::vec3( -85.0f, -85.0f, 0.0f );
-    glm::vec3 vMax = glm::vec3(  85.0f,  85.0f, 0.0f );
-    //glm::vec3 vMin = glm::vec3(-RATIO + 0.0f, -1.0, 0.0f);
-    //glm::vec3 vMax = glm::vec3( RATIO - 0.0f,  1.0f, 0.0f);
+    glm::vec3 vMin = glm::vec3( -100.0f, -100.0f, 0.0f );
+    glm::vec3 vMax = glm::vec3(  100.0f,  100.0f, 0.0f );
 
     if (b.vPos.x < vMin.x)
         v.x =  0.4;
@@ -549,7 +530,7 @@ glm::vec3 Boids::BoundPos(Boid b)
 
 void Boids::LimitVel(Boid &b)
 {
-    glm::vec3 vLim = glm::vec3(0.2f, 0.2f, 0.0f);
+    glm::vec3 vLim = glm::vec3(0.5f, 0.5f, 0.0f);
 
     b.vVel = glm::clamp(b.vVel, -vLim, vLim);
 }
@@ -643,13 +624,13 @@ void processInput(GLFWwindow* window)
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
     {
-        vDebugBoidPos.x -= 1.0f;
+        vDebugBoidPos.x += 1.0f;
         //vCameraPos -= glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
         direction = LEFT;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     {
-        vDebugBoidPos.x += 1.0f;
+        vDebugBoidPos.x -= 1.0f;
         //vCameraPos += glm::normalize(glm::cross(vFront, vUp)) * cameraSpeed;
         direction = RIGHT;
     }

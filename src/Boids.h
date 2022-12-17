@@ -10,7 +10,6 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
-#include <glm/gtx/intersect.hpp>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -77,19 +76,27 @@ class Boids {
         bool bTendAwayFromPlace = false;
         bool bStrongWind = true;
 
+        int fRule1_scalar = 100;
+        int fRule2_scalar = 1;
+        int fRule3_scalar = 64;
+
         // Debug
         glm::vec3 m_vBoundPos = glm::vec3(0.0f, 0.0f, 0.0f);
-        glm::vec3 m_vCursorPos;
+        glm::vec3 m_vCursorPos = glm::vec3(0.0f);
+        glm::vec3 m_vCursorWorldPos = glm::vec3(0.0f);
+
+        glm::vec3 ray_eye = glm::vec3(0.0f);
 
         ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
         unsigned int VBO, VAO, EBO;
         std::string sDebugInfo;
 
-        int iNumBoids = 100;
+        int iNumBoids = 500;
         std::vector<Boid> vFlock;
-        //Boid cDebugBoid = Boid(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-        std::unique_ptr<Boid> cDebugBoid;
+        //Boid cControlBoid = Boid(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+        std::unique_ptr<Boid> cControlBoid;
+        std::unique_ptr<Boid> cCursorBoid;
         std::unique_ptr<Quad> cBg;
 
     public:
@@ -104,8 +111,8 @@ class Boids {
         void RenderDebugBoid();
         void RenderUI();
 
-        void InitializeBoids();
-        void InitializeDebug();
+        void InitBoids();
+        void InitDebug();
         void ClearBoids();
         void UpdateBoids();
         void UpdateDebug();
@@ -118,6 +125,7 @@ class Boids {
         glm::vec3 TendToPlace(Boid b, glm::vec3 vPlace);
         glm::vec3 TendAwayFromPlace(Boid b, glm::vec3 vPlace);
         glm::vec3 StrongWind();
+        glm::vec3 GetCursorRay(glm::mat4 view, glm::mat4 projection, glm::vec3 *ray_eye);
 
 };
 
